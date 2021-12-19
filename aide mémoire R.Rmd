@@ -1,0 +1,430 @@
+---
+title: "Aide mémoire R"
+author: "Raphaële"
+date: "12/18/2021"
+output: pdf_document
+    toc: yes
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+\setlength\parindent{24pt}
+
+# Commencer le code 
+
+```{r}
+setwd("/Users/hugomarty/Desktop/ECO/ECONOMETRIE/L3 S2 Econométrie/Projet econometrie/Institutions et développement")
+```
+
+
+# Importer une base de données 
+
+```{r}
+#Format csv
+data <-read.csv("hist_colony.csv", sep=",", dec=".")
+# Format stata
+library(haven)
+d <- read_dta("~/.dta")
+
+```
+
+# Observer la base
+```{r} 
+
+nrow(data) #nombre de lignes
+ncol(data) #nombre de colonnes
+dim(data) #dimensions 
+
+names(data) #noms des colonnes
+# SYNTHETIQUE : 
+str(data) #renvoie un descriptif plus détaillé de la structure du tableau. Elle liste les différentes variables, indique leur type et affiche les premières valeurs
+
+length() #nombre d’éléments contenus dans l’objet
+
+table$colonne #renvoie la colonne nommée colonne du tableau table
+head($colonne) #premières valeurs
+tail($colonne) #dernières valeurs
+```
+
+
+# Nettoyer une base de données 
+
+## Réduire
+### Enlever les observations présentant des NA : 
+```{r}
+datatp <- subset(EE_2018INDIV, !is.na(EE_2018INDIV$salmee))
+#OU
+d <- data %>% na.omit(d$logpgp95)
+```
+
+### Réduire les observations respectant des conditions
+```{r}
+d <- subset(d,tppred==1 & salmee >=988 & salmee<=9999997, drop=TRUE) 
+#Enregistrer la base réduite et l'importer
+save(d, file = "NOM du fichier.RData")
+load("NOM du fichier.RData")
+
+#Ou avec tidyverse:
+library("tidyverse")
+#filter : permet de choisir des lignes suivant un test.
+filter(pop,age>25)
+
+
+```
+### Réduire le nombre de variables 
+```{r}
+library("tidyverse")
+#select : permet de choisir des variables.
+select(pop,age)
+select(pop,-age)
+dr <- d %>% select(nom_des_variables, ...)
+```
+
+
+## Recoder des variables 
+
+### Renommer et transformer
+
+```{r}
+library("tidyverse")
+#rename : permet de renommer une variable.
+rename(pop,Revenu=Income)
+
+#mutate : permet de créer des variables et faire des opérations ligne à ligne
+mutate(pop,Revenu_Annuel=Revenu*12)
+```
+
+### Changer le format de plusieurs variables 
+```{r}
+dr <- dr  %>% mutate_at(vars(salmee, hhc, extridf, ag, nbenfa18, ancentr), funs(as.numeric)) %>% mutate_at(vars(sexe, dip5, cser, chpub), funs(as.factor))
+```
+
+### Recoder les niveaux d'une variable catégorielle 
+```{r}
+data$sector[data$sector == "00"] <- NA
+data$sector[data$sector == "EV"] <- "S"
+levels(data$sector) <- c(levels(data$sector), "S", "I","A")
+data$sector <- as.factor(data$sector)
+#Niveau de référence pour les dummy variables
+relevel(data$sector, ref="S")
+```
+
+### Créer une nouvelle variable à partir d'un test 
+```{r}
+data$highschool <- ifelse(data$dip5num<3,1,0)
+
+#Ou avec tidyverse
+mutate(pop,Génération=case_when(age<25~jeune,
+                            age>=25 & age<65~ actif, 
+                            age>=65~vieux))
+
+```
+
+
+## Tests et tri
+
+```{r}
+#prendre toute la base en ne gardant que les observations qui respecent la condition sur la variable
+dr[dr$highschool=='1',]
+```
+
+### Group_by (tivyverse)
+Le verbe group_by permet de constituer des groupes dans l’échantillon et de faire une opération dans chaque groupe, comme calculer une moyenne sur les individus du groupe.
+
+```{r}
+pop %>% group_by(Génération) %>%
+mutate(Revenu_par_gen=mean(Revenu))
+```
+
+
+
+# Statistiques descriptives & graphs 
+
+## Variable numérique  (quantitative) 
+
+```{r}
+mean() # moyenne
+#indiquer à mean d’effectuer le calcul en ignorant les valeurs manquantes (NA) : 
+mean(sal, na.rm = TRUE) 
+median(sal) #médiane
+var(sal) #variance
+sd(sal) #écart-type
+quantile(sal, prob = 0,25) #premier quartile
+# INFOS SYNTHETIQUES
+summary() #indique les plusieurs indicateurs classiques 
+```
+
+### Regarder les fréquences
+
+hist(colonne, breaks = 10) : histogramme, avec nombre de classes souhaité. col = … : couleur de la colonne. main : titre. xlab: titre des abscisses.
+
+```{r}
+hist(d$age, col = "skyblue",
+     main = "Répartition des âges des enquêtés",
+     xlab = "Âge",
+     ylab = "Effectif")
+```
+
+freq() : répartition en pourcentage
+- valid indique si on souhaite ou non afficher les pourcentages sur les valeurs valides
+- cum indique si on souhaite ou non afficher les pourcentages cumulés
+- total permet d’ajouter une ligne avec les effectifs totaux
+- sort permet de trier le tableau par fréquence croissante (sort="inc") ou décroissante (sort="dec").
+
+
+## Variable catégorielle  
+
+### Tri à plat
+diagramme en barres pour représenter graphiquement le tri à plat d’une variable qualitative : barplot. S’applique non pas à une variable mais au résultat du tri à plat.
+
+```{r}
+tab <- table(d$clso)
+barplot(tab)
+
+```
+
+
+## Deux variables numériques
+### Graphique régression
+```{r}
+plot(data$avexpr,data$logpgp95, main="Corrélation entre le PIB par habitant et \n
+     l'indice d'expropriation des investissements étrangers", col.main="red")
+abline(fit2, col="blue", lwd=3) # bonne corrélation
+```
+
+## Deux variables catégorielles
+
+### Tableau croisée
+```{r}
+table(d$qualif, d$sexe)
+#Passer en pourcentages ligne ou colonne : lprop ou cprop
+mosaicplot(tab)
+mosaicplot(tab, las = 3, shade = TRUE)
+```
+
+### Test du chi2
+```{r}
+chisq.test(tab)
+chisq.residuals(tab)
+```
+
+
+## Une variable numérique et une variable catégorielle
+
+### Boîte à moustache 
+
+```{r}
+boxplot(d$age ~ d$sport)
+```
+
+Créer des sous-populations
+d_sport <- filter(d, sport == "Oui")
+d_nonsport <- filter(d, sport == "Non")
+on peut ensuite faire des moyennes des ces sous populations
+ou utiliser directement : 
+tapply(d$age, d$sport, mean)
+
+###Test de student : 
+
+```{r}
+t.test(d$age ~ d$sport)
+#S’applique à des distributions normales : graphiquement on vérifie : 
+hist(d_sport$age)
+#ou avec le test de Shapiro : 
+shapiro.test(d_sport$age)
+```
+
+
+# Projet d'économétrie
+## Faire la régression ----
+
+```{r}
+reg2 <- lm(logsal ~ sexe + cser, data = data, weights=extridf, na.action = na.exclude)
+
+```
+
+
+## Voir les résultats de la régression ----
+
+### Résultats
+```{r}
+summary(reg)
+```
+
+### Statistiques descriptives ----
+```{r}
+#Pour la table des statistiques descriptives
+
+library(Table1) 
+library(devtools)
+library(survival)
+
+make.table(dat = data,
+           strat = "sexe",
+           cat.varlist = c("dip5", "cser"),
+           cat.rmstat = list(c("count","row","miss"), c("count", "row", "miss")),
+           cat.header = c("Level of education", "Occupation"),
+           cat.rownames = list(c("null","Graduate","Undergraduate","Highschool degree","Technical degree","No diploma"), c("null","Farmer operators","Craftsmen and entrepreneurs","Executives","intermediate professions", "Employes", "Workers","Unemployed")),
+           cont.varlist = c("salmee","ag"),
+           cont.rmstat  = list(c("count", "miss", "mediqr", "q1q3", "minmax"), c("count", "miss", "mediqr", "q1q3", "minmax")),
+           cont.header = c("Wage", "Age"),
+           colnames     = c(" ", "Males", "Females", "Overall"),
+           output = "latex")
+```
+### Tableau comparaison des régressions ----
+
+```{r, results='asis'} 
+#Asis pour que le stargazer sorte au moment de knit
+#Pour comparer les résultats d'une régression
+library(stargazer) 
+stargazer(reg1, reg2, reg3, reg4, reg5, reg6, reg7,
+          type = "latex",
+          header=F,
+          font.size = "tiny",
+          title = "Comparison",
+          omit = c("sector", "nbenfa18", "dip5"),
+          omit.labels = c( "Sector", "Number of children", "Level of education"))
+
+
+#Comparer deux spécifications 
+plot(d$avexpr, d$logpgp95, main="PIB selon la mesure de l'expropriation")
+abline(reg, col="red", lwd=3)
+abline(reg7, col="blue", lwd=3)
+legend(x='topright',lty=2,col=2,legend='En rouge, la régression corrigée')
+```
+
+## Tester les hypothèses Gauss-Markov ----
+
+### Points aberrants 
+
+```{r}
+library(car)
+# D’abord, calculer les "hatvalues".
+# Sortir un graphique avec les hatvalues.
+#plot(hatvalues(reg5))
+# Ajouter des lignes pour la moyenne et pour trois fois la moyenne.
+#abline(h=c(1,3)*mean(reg4_hat),col=2)
+
+# Identifier les observations aberrantes sur le graphique.
+#id <- which(reg4_hat>3*mean(reg4_hat))
+
+
+#summary(influence.measures(reg4))
+#idinf <- which(apply(influence.measures(reg4)$is.inf, 1, any))
+#reg4_bis2 <- lm(logsal ~ sexe + dip5 + ancentr + sector + nbenfa18, data = #dr[-idinf,])
+#avPlots(reg4_bis)
+
+summary(influence.measures(reg7))
+id <- which(apply(influence.measures(reg7)$is.inf, 1, any))
+data_noinf <- lm(d$logpgp95 ~ d$avexpr + d$avelf + d$latabs + d$lt100km, data = d[-id,])
+avPlots(data_noinf) #nous permet de voir le pouvoir explicatif de chaque variable une fois le point aberrant retiré
+
+```
+
+### Absence de corréalation des résidus : 
+```{r}
+#Test de Durbin-Watson
+library(lmtest)
+dwtest(reg7)
+```
+
+
+### Multicolinéarité
+```{r}
+library(lmtest) 
+# Facteur d'inflation de la variance
+vif(reg4)
+```
+
+### Hétéroscédasticité ----
+```{r}
+#Residuals vs observed values
+ggplot(mapping = aes(x = regfinal[["model"]][["logsal"]], y = regfinal$residuals)) +
+  geom_point() + geom_smooth()
+
+# Predicted values versus observed values
+ggplot(mapping = aes(x =regfinal[["model"]][["logsal"]], y = regfinal[["fitted.values"]])) +
+  geom_point() + geom_smooth() +xlab("Observed values") + ylab("Predicted values")
+```
+
+### Normalité ----
+```{r}
+## Normality ----
+#QQ plot
+qqnorm(regfinal$residuals ,datax=TRUE,ylab="Quantiles observés",xlab="Quantiles théoriques")
+
+
+```
+
+# ACP
+
+A COMPLETER AVEC CODE H2K : agregation.R et script11mars.R
+
+```{r}
+library(FactoMineR) #pour l'analyse
+library(missMDA) #pour les valeurs manquantes
+library(factoextra) #pour la visualisation et l’interprétation des résultats.
+
+```
+## Pondérer le poids des observations
+
+```{r}
+#on prépare la base pour faire l'ACP
+DF_POUR_PCA<-df %>%  select(-CODGEO) %>%
+  mutate(poids=(EFF_LYC_GT+EFF_LYC_PRO)/sum((EFF_LYC_GT+EFF_LYC_PRO))) #on pondère le poids des pools
+```
+
+
+## Données incomplètes
+```{r}
+nb <- estim_ncpPCA(d_pour_pca) # estimate the number of components from incomplete data
+res.comp <- imputePCA(d_pour_pca, ncp = nb$ncp)
+imp <- cbind.data.frame(res.comp$completeObs,res.comp$fittedX)
+
+res.pca <- PCA(imp[,11:30], ncp = nb$ncp, row.w=d_pour_pca$poids, scale.unit = T, graph = FALSE)
+
+```
+
+## Effectuer la PCA
+```{r}
+pour_pca2<-data[, c("avexpr", "democ00a", "avelf", "baseco")]
+pour_pca2[is.na(pour_pca2)]<-0
+
+```
+
+## Résultats
+```{r}
+# FIG I : l'ébouli des pourcentages d'inertie (les valeurs propres)
+barplot(res.pca$eig[,2],main="Part de chaque axe dans l'inertie totale",
+        names.arg=1:nrow(res.pca$eig),col=rainbow(15))
+
+# FIG II : le cercle des variables
+fviz_pca_var(res.pca, geom.var = c("point", "text"),
+             col.var = coloration$is_pro, 
+             palette = c("#0073C2FF", "#EFC000FF", "#868686FF"),
+             legend.title = "Type de filière",
+             title="Graphique des variables de l'ACP")
+
+res.pca2 <- prcomp(pour_pca2, scale = TRUE)
+fviz_pca_var(res.pca2, geom.var = c("point", "text"),
+             title="Graphique des variables de l'ACP", col.var="cos2", gradient=c("blue", "red"))
+
+# Contributions des variables à chaque axe
+fviz_contrib(res.pca, choice = "var", axes = 1, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 10)
+
+#Cluster
+res.hcpc <- HCPC(res.pca, nb.clust=4, graph = FALSE)
+
+fviz_cluster(res.hcpc,
+             repel = TRUE,            # Evite le chevauchement des textes
+             show.clust.cent = TRUE, # Montre le centre des clusters
+             palette = "jco",         # Palette de couleurs, voir ?ggpubr::ggpar
+             ggtheme = theme_minimal(),
+             main = "Factor map"
+)
+
+```
+
