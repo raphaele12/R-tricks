@@ -2,9 +2,8 @@
 title: "Aide mémoire R"
 author: "Raphaële"
 date: "12/18/2021"
-output: pdf_document
-    toc: yes
-fontsize: 11pt
+output: github_document :
+
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Commencer le code 
 
 ```{r}
-setwd("/Users/hugomarty/Desktop/ECO/ECONOMETRIE/L3 S2 Econométrie/Projet econometrie/Institutions et développement")
+setwd("/Users/hugomarty/Desktop/ECO/ECONOMETRIE/L3 S2 Econométrie/Projet econometrie/Institutions et développement")
 ```
 
 
@@ -353,7 +352,7 @@ ggplot(mapping = aes(x =regfinal[["model"]][["logsal"]], y = regfinal[["fitted.v
 ```{r}
 ## Normality ----
 #QQ plot
-qqnorm(regfinal$residuals ,datax=TRUE,ylab="Quantiles observés",xlab="Quantiles théoriques")
+qqnorm(regfinal$residuals ,datax=TRUE,ylab="Quantiles observés",xlab="Quantiles théoriques")
 
 
 ```
